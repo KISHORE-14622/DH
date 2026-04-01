@@ -39,6 +39,28 @@ type DrawResult = {
   };
 };
 
+type AdminCharity = {
+  _id: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  featured: boolean;
+  active: boolean;
+};
+
+type AdminUser = {
+  _id: string;
+  name: string;
+  email: string;
+  role: "subscriber" | "admin";
+  subscription: {
+    status: "inactive" | "active" | "canceled" | "lapsed";
+    plan: "monthly" | "yearly";
+    renewalDate: string | null;
+  };
+  scores: Array<{ _id: string; score: number; playedAt: string }>;
+};
+
 const resolveProofUrl = (proofUrl: string) => {
   if (proofUrl.startsWith("http://") || proofUrl.startsWith("https://")) {
     return proofUrl;
@@ -52,6 +74,8 @@ export const AdminPage = () => {
   const [result, setResult] = useState<DrawResult | null>(null);
   const [message, setMessage] = useState("");
   const [winners, setWinners] = useState<AdminWinner[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [charities, setCharities] = useState<AdminCharity[]>([]);
   const [reportSummary, setReportSummary] = useState<{
     totalUsers: number;
     activeSubscribers: number;
@@ -81,6 +105,74 @@ export const AdminPage = () => {
     try {
       const { data } = await apiClient.get("/winners/admin");
       setWinners(data.winners || []);
+    } catch (error) {
+      setMessage(parseApiError(error));
+    } finally {
+      setLoadingAction("");
+    }
+  };
+
+  const loadUsers = async () => {
+    setLoadingAction("users");
+    try {
+      const { data } = await apiClient.get("/admin/users");
+      setUsers(data.users || []);
+    } catch (error) {
+      setMessage(parseApiError(error));
+    } finally {
+      setLoadingAction("");
+    }
+  };
+
+  const loadCharities = async () => {
+    setLoadingAction("charities");
+    try {
+      const { data } = await apiClient.get("/charities");
+      setCharities(data.charities || []);
+    } catch (error) {
+      setMessage(parseApiError(error));
+    } finally {
+      setLoadingAction("");
+    }
+  };
+
+  const setSubscriptionStatus = async (userId: string, status: string) => {
+    setLoadingAction(`user-${userId}`);
+    try {
+      await apiClient.patch(`/admin/users/${userId}`, { subscription: { status } });
+      setMessage("User status updated.");
+      await loadUsers();
+    } catch (error) {
+      setMessage(parseApiError(error));
+    } finally {
+      setLoadingAction("");
+    }
+  };
+
+  const setCharityActive = async (charityId: string, active: boolean) => {
+    setLoadingAction(`char-${charityId}`);
+    try {
+      if (active) {
+        await apiClient.put(`/charities/${charityId}`, { active: true });
+        setMessage("Charity activated.");
+      } else {
+        await apiClient.delete(`/charities/${charityId}`);
+        setMessage("Charity archived.");
+      }
+      await loadCharities();
+    } catch (error) {
+      setMessage(parseApiError(error));
+    } finally {
+      setLoadingAction("");
+    }
+  };
+
+  const toggleCharityFeatured = async (charityId: string, current: boolean) => {
+    setLoadingAction(`char-${charityId}`);
+    try {
+      await apiClient.put(`/charities/${charityId}`, { featured: !current });
+      setMessage("Charity featured updated.");
+      await loadCharities();
     } catch (error) {
       setMessage(parseApiError(error));
     } finally {
@@ -338,6 +430,12 @@ export const AdminPage = () => {
           <button className="ghost-btn" onClick={loadWinners}>
             {loadingAction === "winners" ? "Loading..." : "Refresh Winners"}
           </button>
+          <button className="ghost-btn" onClick={loadUsers}>
+            {loadingAction === "users" ? "Loading..." : "Load Users"}
+          </button>
+          <button className="ghost-btn" onClick={loadCharities}>
+            {loadingAction === "charities" ? "Loading..." : "Load Charities"}
+          </button>
           <button className="ghost-btn" onClick={loadReports}>
             {loadingAction === "reports" ? "Loading..." : "Load Reports"}
           </button>
@@ -440,6 +538,82 @@ export const AdminPage = () => {
           ))}
         </div>
       </motion.section>
+
+      {charities.length > 0 && (
+        <motion.section className="panel full-width glow-panel" initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <h2>Charity Management</h2>
+          <div className="winner-list">
+            {charities.map((charity) => (
+              <article key={charity._id} className={charity.active ? "winner-card" : "winner-card opacity-50"}>
+                <p>
+                  <strong>{charity.name}</strong> {charity.featured ? "⭐ Featured" : ""}
+                </p>
+                <p>{charity.description.slice(0, 100)}...</p>
+                <div className="btn-row" style={{ marginTop: "0.5rem" }}>
+                  <button
+                    className="ghost-btn"
+                    onClick={() => toggleCharityFeatured(charity._id, charity.featured)}
+                    disabled={loadingAction.startsWith("char-")}
+                  >
+                    Toggle Featured
+                  </button>
+                  <button
+                    className="ghost-btn"
+                    onClick={() => setCharityActive(charity._id, !charity.active)}
+                    disabled={loadingAction.startsWith("char-")}
+                  >
+                    {charity.active ? "Archive" : "Restore"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {users.length > 0 && (
+        <motion.section className="panel full-width glow-panel" initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <h2>User Management</h2>
+          <div className="winner-list">
+            {users.map((user) => (
+              <article key={user._id} className="winner-card">
+                <p>
+                  <strong>{user.name}</strong> ({user.email})
+                </p>
+                <p>
+                  Role: {user.role} | Status: {user.subscription?.status || "inactive"} | Plan: {user.subscription?.plan || "monthly"}
+                </p>
+                <div className="btn-row" style={{ marginTop: "0.5rem" }}>
+                  {user.subscription?.status === "active" ? (
+                    <button
+                      className="ghost-btn"
+                      onClick={() => setSubscriptionStatus(user._id, "canceled")}
+                      disabled={loadingAction.startsWith("user-")}
+                    >
+                      Cancel Sub
+                    </button>
+                  ) : (
+                    <button
+                      className="ghost-btn"
+                      onClick={() => setSubscriptionStatus(user._id, "active")}
+                      disabled={loadingAction.startsWith("user-")}
+                    >
+                      Activate Sub
+                    </button>
+                  )}
+                  <button
+                    className="ghost-btn"
+                    onClick={() => setSubscriptionStatus(user._id, "lapsed")}
+                    disabled={loadingAction.startsWith("user-")}
+                  >
+                    Set Lapsed
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </motion.section>
+      )}
     </motion.div>
   );
 };

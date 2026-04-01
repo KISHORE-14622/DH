@@ -102,6 +102,7 @@ router.get("/reconciliation", requireAuth, requireRole("admin"), async (_req, re
   const prizeAllocations = map.prize_pool_allocation || 0;
   const drawCommitment = map.draw_prize_commitment || 0;
   const payoutOutflow = map.payout_outflow || 0;
+  const independentDonations = map.independent_donation || 0;
 
   const allocationGap = Number((income - charityAllocation - platformRevenue - prizeAllocations).toFixed(2));
   const prizeLiability = Number((drawCommitment - payoutOutflow).toFixed(2));
@@ -114,6 +115,8 @@ router.get("/reconciliation", requireAuth, requireRole("admin"), async (_req, re
       prizePoolAllocation: prizeAllocations,
       drawCommitment,
       payoutOutflow
+      ,
+      independentDonations
     },
     checks: {
       allocationGap,

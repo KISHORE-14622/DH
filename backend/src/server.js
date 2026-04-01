@@ -11,6 +11,7 @@ import subscriptionRoutes from "./routes/subscriptions.js";
 import winnerRoutes from "./routes/winners.js";
 import reportRoutes from "./routes/reports.js";
 import stripeWebhookRoutes from "./routes/stripeWebhook.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/winners", winnerRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((error, _req, res, _next) => {
   console.error(error);

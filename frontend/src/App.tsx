@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import { AdminPage } from "./pages/AdminPage";
+import { CharitiesPage } from "./pages/CharitiesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -16,6 +17,7 @@ function App() {
         <h1>Drive For Good</h1>
         <nav>
           <NavLink to="/">Home</NavLink>
+          <NavLink to="/charities">Charities</NavLink>
           {user ? <NavLink to="/dashboard">Dashboard</NavLink> : <NavLink to="/login">Login</NavLink>}
           {user?.role === "admin" && <NavLink to="/admin">Admin</NavLink>}
           {user ? (
@@ -31,6 +33,7 @@ function App() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/charities" element={<CharitiesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route

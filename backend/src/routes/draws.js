@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { buildWinningNumbers, countMatches, splitPrizePool } from "../services/drawService.js";
 import { toDrawNumbers } from "../services/scoreService.js";
 import { sendDrawPublishedEmail, sendWinnerAlertEmail } from "../services/notificationService.js";
-import { recordDrawCommitmentLedger } from "../services/financeService.js";
+import { getMonthlyPrizeContribution, recordDrawCommitmentLedger } from "../services/financeService.js";
 
 const router = express.Router();
 
@@ -14,7 +14,10 @@ const getMonthKey = (date = new Date()) => `${date.getUTCFullYear()}-${String(da
 
 const buildResult = async (mode) => {
   const winningNumbers = await buildWinningNumbers(mode);
-  const activeSubscribers = await User.find({ "subscription.status": "active" });
+  const [activeSubscribers, latestDraw] = await Promise.all([
+    User.find({ "subscription.status": "active" }).select("scores subscription.plan"),
+    DrawRun.findOne({ publishedAt: { $ne: null } }).sort({ publishedAt: -1 }).select("prizePool.rollover")
+  ]);
 
   const winnerCounts = {
     match5: 0,
@@ -29,8 +32,12 @@ const buildResult = async (mode) => {
     }
   });
 
-  const totalPool = activeSubscribers.length * 1000;
-  const prizePool = splitPrizePool({ totalPool, winnerCounts, rolloverIn: 0 });
+  const totalPool = activeSubscribers.reduce(
+    (acc, user) => acc + getMonthlyPrizeContribution(user.subscription?.plan || "monthly"),
+    0
+  );
+  const rolloverIn = Number(latestDraw?.prizePool?.rollover || 0);
+  const prizePool = splitPrizePool({ totalPool, winnerCounts, rolloverIn });
 
   return { winningNumbers, winnerCounts, prizePool };
 };

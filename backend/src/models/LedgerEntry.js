@@ -12,6 +12,7 @@ const ledgerEntrySchema = new mongoose.Schema(
         "subscription_income",
         "prize_pool_allocation",
         "charity_allocation",
+        "independent_donation",
         "platform_revenue",
         "draw_prize_commitment",
         "payout_outflow"

@@ -727,8 +727,16 @@ button:disabled {
 
   .topbar {
     flex-direction: column;
-    gap: 0.65rem;
-    align-items: flex-start;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .topbar nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0.5rem;
   }
 
   .login-shell,
@@ -742,5 +750,10 @@ button:disabled {
 
   .main-content {
     padding: 1rem;
+  }
+
+  .sparkline-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

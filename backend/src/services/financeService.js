@@ -30,6 +30,19 @@ export const computeSubscriptionAllocations = ({ plan, contributionPercentage })
   };
 };
 
+export const getMonthlyPrizeContribution = (plan) => {
+  const allocations = computeSubscriptionAllocations({
+    plan,
+    contributionPercentage: 10
+  });
+
+  if (plan === "yearly") {
+    return toCurrencyNumber(allocations.prizePoolAmount / 12);
+  }
+
+  return allocations.prizePoolAmount;
+};
+
 export const recordSubscriptionLedger = async ({ user, plan, source }) => {
   const allocations = computeSubscriptionAllocations({
     plan,
@@ -99,6 +112,18 @@ export const recordPayoutLedger = async ({ winnerRecordId, drawRunId, userId, am
     amount: toCurrencyNumber(amount),
     source: "winner_payout",
     reference: String(winnerRecordId),
+    metadata: {}
+  });
+};
+
+export const recordIndependentDonationLedger = async ({ userId = null, charityId, amount, reference = "" }) => {
+  await LedgerEntry.create({
+    userId,
+    charityId,
+    entryType: "independent_donation",
+    amount: toCurrencyNumber(amount),
+    source: "independent_donation",
+    reference,
     metadata: {}
   });
 };
